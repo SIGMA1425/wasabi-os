@@ -45,14 +45,6 @@ pub const LAYOUT_PAGE_4K: Layout = unsafe { Layout::from_size_align_unchecked(40
 
 impl Header {
     fn can_provide(&self, size: usize, align: usize) -> bool {
-        let mut sw = SerialPort::new_for_com1();
-        writeln!(
-            sw,
-            "self.size: {}, provide_size: {}",
-            self.size,
-            size + HEADER_SIZE * 2 * align
-        )
-        .unwrap();
         self.size >= size + HEADER_SIZE * 2 * align
     }
     fn is_allocated(&self) -> bool {
@@ -86,11 +78,8 @@ impl Header {
         let size = max(round_up_to_nearest_pow2(size).ok()?, HEADER_SIZE);
         let align = max(align, HEADER_SIZE);
 
-        let mut sw = SerialPort::new_for_com1();
-        writeln!(sw, "provide: size->{}, align->{}", size, align).unwrap();
         // 要求された領域を切り出す
         if self.is_allocated() || !self.can_provide(size, align) {
-            writeln!(sw, "provide: None").unwrap();
             None
         } else {
             // 使われているさいず
@@ -117,7 +106,6 @@ impl Header {
             assert!(self.size >= size_used + HEADER_SIZE);
             self.size -= size_used;
             self.next_header = Some(header_for_allocated);
-            writeln!(sw, "allocated_addr: {}", allocated_addr).unwrap();
             Some(allocated_addr as *mut u8)
         }
     }
@@ -191,10 +179,8 @@ impl FirstFitAllocator {
         // メモリが確保できたら、そのアドレスを返す
         // メモリが確保できなければNULL
         loop {
-            let mut sw = SerialPort::new_for_com1();
             match header {
                 Some(e) => {
-                    writeln!(sw, "header.size: {}", e.size).unwrap();
                     match e.provide(layout.size(), layout.align()) {
                         Some(p) => break p,
                         None => {
@@ -212,12 +198,10 @@ impl FirstFitAllocator {
 
     // UEFIからのメモリマップからの初期化
     pub fn init_with_mmap(&self, memory_map: &MemoryMapHolder) {
-        let mut sw = SerialPort::new_for_com1();
         for e in memory_map.iter() {
             if e.memory_type() != EfiMemoryType::CONVENTIONAL_MEMORY {
                 continue;
             }
-            writeln!(sw, "physical_start: {}", e.physical_start()).unwrap();
             self.add_free_from_descriptor(e);
         }
     }
