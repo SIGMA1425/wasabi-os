@@ -1,7 +1,6 @@
 extern crate alloc;
 
 use crate::result::Result;
-use crate::serial::SerialPort;
 use crate::uefi::EfiMemoryDescriptor;
 use crate::uefi::EfiMemoryType;
 use crate::uefi::MemoryMapHolder;
@@ -14,7 +13,6 @@ use core::borrow::BorrowMut;
 use core::cell::RefCell;
 use core::cmp::max;
 use core::fmt;
-use core::fmt::Write;
 use core::mem::size_of;
 use core::ops::DerefMut;
 use core::ptr::null_mut;
