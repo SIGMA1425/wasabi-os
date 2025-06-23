@@ -117,6 +117,7 @@ impl Header {
             assert!(self.size >= size_used + HEADER_SIZE);
             self.size -= size_used;
             self.next_header = Some(header_for_allocated);
+            writeln!(sw, "allocated_addr: {}", allocated_addr).unwrap();
             Some(allocated_addr as *mut u8)
         }
     }
@@ -257,8 +258,6 @@ impl FirstFitAllocator {
 
 #[cfg(test)]
 mod test {
-    use crate::serial::SerialPort;
-
     use super::*;
     use alloc::vec;
 
@@ -273,12 +272,11 @@ mod test {
 
     #[test_case]
     fn malloc_align() {
-        return;
         let mut pointers = [null_mut::<u8>(); 100];
-        for align in [1, 2, 3, 8, 16, 32, 4096] {
+        for align in [1, 2, 4, 8, 16, 32, 4096] {
             for e in pointers.iter_mut() {
                 *e = ALLOCATOR.alloc_with_options(
-                    Layout::from_size_align(1234, align).expect("Failed to create Layout"),
+                    Layout::from_size_align(1234, align).expect("Failed to create Layout!!!"),
                 );
                 assert!(*e as usize != 0);
                 assert!((*e as usize) % align == 0);
@@ -288,7 +286,6 @@ mod test {
 
     #[test_case]
     fn malloc_align_random_order() {
-        return;
         for align in [32, 4096, 8, 4, 16, 2, 1] {
             let mut pointers = [null_mut::<u8>(); 100];
             for e in pointers.iter_mut() {
@@ -303,7 +300,6 @@ mod test {
 
     #[test_case]
     fn allocated_objects_have_no_overlap() {
-        return;
         let allocations = [
             Layout::from_size_align(128, 128).unwrap(),
             Layout::from_size_align(32, 32).unwrap(),
