@@ -35,6 +35,7 @@ pub enum EfiStatus {
     Success = 0,
 }
 
+// UEFIから返されるメモリマップにおける、様々なディスクリプタのタイプ
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum EfiMemoryType {
@@ -55,39 +56,41 @@ pub enum EfiMemoryType {
     PERSISTENT_MEMORY,
 }
 
+// メモリのディスクリプタ
+// メモリマップはこれが連なっている
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct EfiMemoryDescriptor{
+pub struct EfiMemoryDescriptor {
     memory_type: EfiMemoryType,
     physical_start: u64,
     virtual_start: u64,
     number_of_pages: u64,
     attribute: u64,
 }
-impl EfiMemoryDescriptor{
-    pub fn memory_type(&self) -> EfiMemoryType{
+impl EfiMemoryDescriptor {
+    pub fn memory_type(&self) -> EfiMemoryType {
         self.memory_type
     }
-    pub fn number_of_pages(&self) -> u64{
+    pub fn number_of_pages(&self) -> u64 {
         self.number_of_pages
     }
-    pub fn physical_start(&self) -> u64{
+    pub fn physical_start(&self) -> u64 {
         self.physical_start
     }
 }
 
 const MEMORY_MAP_BUFFER_SIZE: usize = 0x8000;
 
-pub struct MemoryMapHolder{
+pub struct MemoryMapHolder {
     memory_map_buffer: [u8; MEMORY_MAP_BUFFER_SIZE],
     memory_map_size: usize,
     map_key: usize,
     descriptor_size: usize,
     descriptor_version: u32,
 }
-impl MemoryMapHolder{
-    pub const fn new() -> MemoryMapHolder{
-        MemoryMapHolder{
+impl MemoryMapHolder {
+    pub const fn new() -> MemoryMapHolder {
+        MemoryMapHolder {
             memory_map_buffer: [0; MEMORY_MAP_BUFFER_SIZE],
             memory_map_size: MEMORY_MAP_BUFFER_SIZE,
             map_key: 0,
@@ -95,28 +98,27 @@ impl MemoryMapHolder{
             descriptor_version: 0,
         }
     }
-    pub fn iter(&self) -> MemoryMapIterator{
+    pub fn iter(&self) -> MemoryMapIterator {
         MemoryMapIterator { map: self, ofs: 0 }
     }
 }
-impl Default for MemoryMapHolder{
+impl Default for MemoryMapHolder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-pub struct MemoryMapIterator<'a>{
+pub struct MemoryMapIterator<'a> {
     map: &'a MemoryMapHolder,
     ofs: usize,
 }
-impl<'a> Iterator for MemoryMapIterator<'a>{
+impl<'a> Iterator for MemoryMapIterator<'a> {
     type Item = &'a EfiMemoryDescriptor;
-    fn next(&mut self) -> Option<&'a EfiMemoryDescriptor>{
-        if self.ofs >= self.map.memory_map_size{
+    fn next(&mut self) -> Option<&'a EfiMemoryDescriptor> {
+        if self.ofs >= self.map.memory_map_size {
             None
-        }
-        else {
-            let e: &EfiMemoryDescriptor = unsafe{
+        } else {
+            let e: &EfiMemoryDescriptor = unsafe {
                 &*(self.map.memory_map_buffer.as_ptr().add(self.ofs) as *const EfiMemoryDescriptor)
             };
             self.ofs += self.map.descriptor_size;
@@ -141,8 +143,7 @@ pub struct EfiBootServicesTable {
         descriptor_version: *mut u32,
     ) -> EfiStatus,
     _reserved1: [u64; 21],
-    exit_boot_services:
-        extern "win64" fn(image_handle: EfiHandle, map_key: usize) -> EfiStatus,
+    exit_boot_services: extern "win64" fn(image_handle: EfiHandle, map_key: usize) -> EfiStatus,
 
     _reserved4: [u64; 10],
     locate_protocol: extern "win64" fn(
@@ -151,8 +152,8 @@ pub struct EfiBootServicesTable {
         interface: *mut *mut EfiVoid,
     ) -> EfiStatus,
 }
-impl EfiBootServicesTable{
-    pub fn get_memory_map(&self, map: &mut MemoryMapHolder) -> EfiStatus{
+impl EfiBootServicesTable {
+    pub fn get_memory_map(&self, map: &mut MemoryMapHolder) -> EfiStatus {
         (self.get_memory_map)(
             &mut map.memory_map_size,
             map.memory_map_buffer.as_mut_ptr(),
@@ -170,15 +171,15 @@ const _: () = assert!(offset_of!(EfiBootServicesTable, locate_protocol) == 320);
 #[repr(C)]
 // EFI System Tableを表現する構造体
 pub struct EfiSystemTable {
-    // 64bit * 12の領域 
+    // 64bit * 12の領域
     _reserved0: [u64; 12],
     // EFI Boot Service Table のアドレス
     // locate_protocol()のアドレスも格納されている
     pub boot_services: &'static EfiBootServicesTable,
 }
 const _: () = assert!(offset_of!(EfiSystemTable, boot_services) == 96);
-impl EfiSystemTable{
-    pub fn boot_services(&self) -> &EfiBootServicesTable{
+impl EfiSystemTable {
+    pub fn boot_services(&self) -> &EfiBootServicesTable {
         self.boot_services
     }
 }
@@ -230,7 +231,7 @@ fn locate_graphic_protocol<'a>(
 }
 
 #[derive(Clone, Copy)]
-pub struct VramBufferInfo{
+pub struct VramBufferInfo {
     buf: *mut u8,
     width: i64,
     height: i64,
@@ -254,33 +255,34 @@ impl Bitmap for VramBufferInfo {
     }
 }
 
-pub fn init_vram(efi_system_table: &EfiSystemTable) -> Result<VramBufferInfo>{
+pub fn init_vram(efi_system_table: &EfiSystemTable) -> Result<VramBufferInfo> {
     let gp = locate_graphic_protocol(efi_system_table)?;
-    Ok(VramBufferInfo { 
-        buf: gp.mode.frame_buffer_base as *mut u8, 
+    Ok(VramBufferInfo {
+        buf: gp.mode.frame_buffer_base as *mut u8,
         width: gp.mode.info.horizontal_resolution as i64,
-        height: gp.mode.info.vertival_resolution as i64, 
-        pixels_per_line: gp.mode.info.pixels_per_scan_line as i64 })
+        height: gp.mode.info.vertival_resolution as i64,
+        pixels_per_line: gp.mode.info.pixels_per_scan_line as i64,
+    })
 }
 
-pub struct VramTextWriter<'a>{
+pub struct VramTextWriter<'a> {
     vram: &'a mut VramBufferInfo,
     cursor_x: i64,
     cursor_y: i64,
 }
-impl<'a> VramTextWriter<'a>{
-    pub fn new(vram: &'a mut VramBufferInfo) -> Self{
-        Self{
+impl<'a> VramTextWriter<'a> {
+    pub fn new(vram: &'a mut VramBufferInfo) -> Self {
+        Self {
             vram,
             cursor_x: 0,
             cursor_y: 0,
         }
     }
 }
-impl fmt::Write for VramTextWriter<'_>{
-    fn write_str(&mut self, s: &str) -> fmt::Result{
-        for c in s.chars(){
-            if c == '\n'{
+impl fmt::Write for VramTextWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.chars() {
+            if c == '\n' {
                 self.cursor_y += 16;
                 self.cursor_x = 0;
                 continue;
@@ -296,15 +298,15 @@ pub fn exit_from_boot_services(
     image_handle: EfiHandle,
     efi_system_table: &EfiSystemTable,
     memory_map: &mut MemoryMapHolder,
-){
-    loop{
+) {
+    loop {
+        // メモリマップを取得
         let status = efi_system_table.boot_services.get_memory_map(memory_map);
         assert_eq!(status, EfiStatus::Success);
-        let status = (efi_system_table.boot_services.exit_boot_services)(
-            image_handle,
-            memory_map.map_key,
-        );
-        if status == EfiStatus::Success{
+
+        let status =
+            (efi_system_table.boot_services.exit_boot_services)(image_handle, memory_map.map_key);
+        if status == EfiStatus::Success {
             break;
         }
     }
