@@ -85,9 +85,14 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     let t = t.and_then(|t| t.next_level(0));
     println!("{t:?}");
 
+    // 例外の初期化
     let (_gdt, _idt) = init_exceptions();
     info!("Exception initialized!");
+    // INT3命令を実行する
+    // INT3命令実行時にsrc/x86.rs内で定義した例外ハンドラに処理を移す
+    // 例外ハンドラ実行後にIRET命令を実行して例外ハンドラの処理を終了
     trigger_debug_interrupt();
+    info!("Exception continued");
 
     // println!("Hello, world!");
     loop {

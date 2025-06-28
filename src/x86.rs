@@ -367,6 +367,9 @@ extern "sysv64" {
     fn interrupt_entrypoint32();
 }
 
+// 例外処理関数interrupt_entrypointに呼び出される
+// レジスタの値を退避してinthandler()を呼び出す
+// inthandler()の終了後レジスタを復元してIRET命令を実行
 global_asm!(
     r#"
     .global inthandler_common
@@ -434,12 +437,15 @@ pub fn read_cr2() -> u64 {
     cr2
 }
 
+// 例外処理で呼ばれる関数
 #[no_mangle]
 extern "sysv64" fn inthandler(info: &InterruptInfo, index: usize) {
     error!("Interrput Info: {:?}", info);
     error!("Exception {index:#04X}:");
     match index {
         3 => {
+            // INT3命令はTrapなのでreturnして
+            // inthandler_commonに処理を戻す
             error!("Breakpoint");
             return;
         }
