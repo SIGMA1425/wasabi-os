@@ -11,6 +11,7 @@ use wasabi::graphics::fill_rect;
 use wasabi::graphics::Bitmap;
 
 use wasabi::info;
+use wasabi::init::init_paging;
 use wasabi::qemu::exit_qemu;
 use wasabi::qemu::QemuExitCode;
 
@@ -31,6 +32,9 @@ use wasabi::println;
 
 use wasabi::x86::init_exceptions;
 use wasabi::x86::trigger_debug_interrupt;
+use wasabi::x86::flush_tlb;
+use wasabi::x86::read_cr3;
+use wasabi::x86::PageAttr;
 
 pub type Result<T> = core::result::Result<T, &'static str>;
 
@@ -93,6 +97,16 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     // 例外ハンドラ実行後にIRET命令を実行して例外ハンドラの処理を終了
     trigger_debug_interrupt();
     info!("Exception continued");
+    init_paging(&memory_map);
+    info!("Now we are using our own page tables!");
+
+    let page_table = read_cr3();
+    unsafe {
+        (*page_table)
+            .create_mapping(0, 4096, 0, PageAttr::NotPresent)
+            .expect("Failed to unmap page 0");
+    }
+    flush_tlb();
 
     // println!("Hello, world!");
     loop {
