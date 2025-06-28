@@ -178,15 +178,13 @@ impl FirstFitAllocator {
         // メモリが確保できなければNULL
         loop {
             match header {
-                Some(e) => {
-                    match e.provide(layout.size(), layout.align()) {
-                        Some(p) => break p,
-                        None => {
-                            header = e.next_header.borrow_mut();
-                            continue;
-                        }
+                Some(e) => match e.provide(layout.size(), layout.align()) {
+                    Some(p) => break p,
+                    None => {
+                        header = e.next_header.borrow_mut();
+                        continue;
                     }
-                }
+                },
                 None => {
                     break null_mut::<u8>();
                 }

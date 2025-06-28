@@ -6,13 +6,13 @@
 #![no_main]
 pub mod allocator;
 pub mod graphics;
+pub mod init;
+pub mod print;
 pub mod qemu;
 pub mod result;
 pub mod serial;
 pub mod uefi;
 pub mod x86;
-pub mod init;
-pub mod print;
 
 #[cfg(test)]
 pub mod test_runner;
@@ -21,6 +21,6 @@ pub mod test_runner;
 #[no_mangle]
 pub fn efi_main(image_handle: uefi::EfiHandle, efi_system_table: &uefi::EfiSystemTable) {
     init::init_basic_runtime(image_handle, efi_system_table);
-    
+
     run_unit_tests()
 }

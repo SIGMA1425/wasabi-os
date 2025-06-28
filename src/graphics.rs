@@ -116,13 +116,13 @@ fn lookup_font(c: char) -> Option<[[char; 8]; 16]> {
             FONT_CACHE.get_or_insert_with(|| {
                 let mut font = [[['*'; 8]; 16]; 256];
                 let mut fi = FONT_SOURCE.split('\n');
-                while let Some(line) = fi.next(){
-                    if let Some(line) = line.strip_prefix("0x"){
-                        if let Ok(idx) = u8::from_str_radix(line, 16){
+                while let Some(line) = fi.next() {
+                    if let Some(line) = line.strip_prefix("0x") {
+                        if let Ok(idx) = u8::from_str_radix(line, 16) {
                             let mut glyph = [['*'; 8]; 16];
-                            for (y, line) in fi.clone().take(16).enumerate(){
-                                for (x, c) in line.chars().enumerate(){
-                                    if let Some(e) = glyph[y].get_mut(x){
+                            for (y, line) in fi.clone().take(16).enumerate() {
+                                for (x, c) in line.chars().enumerate() {
+                                    if let Some(e) = glyph[y].get_mut(x) {
                                         *e = c;
                                     }
                                 }
@@ -154,8 +154,7 @@ fn lookup_font(c: char) -> Option<[[char; 8]; 16]> {
         //         }
         //     }
         // }
-    }
-    else{
+    } else {
         None
     }
 }
