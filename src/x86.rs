@@ -111,38 +111,34 @@ impl<const LEVEL: usize, const SHIFT: usize, NEXT> Entry<LEVEL, SHIFT, NEXT> {
             Err("Page Not Fount")
         }
     }
-    fn table_mut(&mut self) -> Result<&mut NEXT>{
-        if self.is_present(){
-            Ok(unsafe {&mut *((self.value & !ATTR_MASK) as *mut NEXT)})
-        }
-        else {
+    fn table_mut(&mut self) -> Result<&mut NEXT> {
+        if self.is_present() {
+            Ok(unsafe { &mut *((self.value & !ATTR_MASK) as *mut NEXT) })
+        } else {
             Err("Page Not Fount")
         }
     }
-    fn set_page(&mut self, phys: u64, attr: PageAttr) -> Result<()>{
-        if phys & ATTR_MASK != 0{
+    fn set_page(&mut self, phys: u64, attr: PageAttr) -> Result<()> {
+        if phys & ATTR_MASK != 0 {
             Err("phys is not aligned")
-        }
-        else{
+        } else {
             self.value = phys | attr as u64;
             Ok(())
         }
     }
-    fn populate(&mut self) -> Result<&mut Self>{
-        if self.is_present(){
+    fn populate(&mut self) -> Result<&mut Self> {
+        if self.is_present() {
             Err("Page is already populated")
-        }
-        else{
-            let next: Box<NEXT> = Box::new(unsafe {MaybeUninit::zeroed().assume_init()});
+        } else {
+            let next: Box<NEXT> = Box::new(unsafe { MaybeUninit::zeroed().assume_init() });
             self.value = Box::into_raw(next) as u64 | PageAttr::ReadWriteKernel as u64;
             Ok(self)
         }
     }
-    fn ensure_populated(&mut self) -> Result<&mut Self>{
-        if self.is_present(){
+    fn ensure_populated(&mut self) -> Result<&mut Self> {
+        if self.is_present() {
             Ok(self)
-        }
-        else{
+        } else {
             self.populate()
         }
     }
@@ -177,7 +173,7 @@ impl<const LEVEL: usize, const SHIFT: usize, NEXT: core::fmt::Debug> Table<LEVEL
     pub fn next_level(&self, index: usize) -> Option<&NEXT> {
         self.entry.get(index).and_then(|e| e.table().ok())
     }
-    fn calc_index(&self, addr: u64) -> usize{
+    fn calc_index(&self, addr: u64) -> usize {
         ((addr >> SHIFT) & 0b1_1111_1111) as usize
     }
 }
@@ -201,29 +197,29 @@ pub type PDPT = Table<3, 30, PD>;
 pub type PML4 = Table<4, 39, PDPT>;
 
 impl PML4 {
-    pub fn new() -> Box<Self>{
+    pub fn new() -> Box<Self> {
         Box::new(Self::default())
     }
-    fn default() -> Self{
-        unsafe {MaybeUninit::zeroed().assume_init()}
+    fn default() -> Self {
+        unsafe { MaybeUninit::zeroed().assume_init() }
     }
     pub fn create_mapping(
         &mut self,
         virt_start: u64,
         virt_end: u64,
         phys: u64,
-        attr: PageAttr
-    ) -> Result<()>{
-        if virt_start & ATTR_MASK != 0{
+        attr: PageAttr,
+    ) -> Result<()> {
+        if virt_start & ATTR_MASK != 0 {
             return Err("Invalid virt_start");
         }
         if virt_end & ATTR_MASK != 0 {
             return Err("Invalid virt_end");
         }
-        if phys & ATTR_MASK != 0{
+        if phys & ATTR_MASK != 0 {
             return Err("Invalid phys");
         }
-        for addr in (virt_start..virt_end).step_by(PAGE_SIZE){
+        for addr in (virt_start..virt_end).step_by(PAGE_SIZE) {
             let index = self.calc_index(addr);
             let table = self.entry[index].ensure_populated()?.table_mut()?;
             let index = table.calc_index(addr);
@@ -397,18 +393,18 @@ macro_rules! interrupt_entrypoint {
         // global_asm!はファイル全体で有効なアセンブリコードを埋め込む
         // concat!は複数の文字列リテラルをコンパイル時に連結して1つの文字列にする
         global_asm!(concat!(
-            ".global interrupt_entrypoint",  // シンボルをグローバルに公開する
+            ".global interrupt_entrypoint", // シンボルをグローバルに公開する
             stringify!($index),             // .global "interrupt_entrypont" + str($index)
             "\n",
-            "interrupt_entrypoint",         // 関数のラベルを定義
+            "interrupt_entrypoint", // 関数のラベルを定義
             stringify!($index),
             ":\n",
-            "push 0 // No error code\n",    // スタックにエラーコード0を積む
+            "push 0 // No error code\n", // スタックにエラーコード0を積む
             "push rcx // SJave rcx first to reuse \n", // rcxを退避
-            "mov rcx,",                     // rcxに$indexの値をmov
+            "mov rcx,",                  // rcxに$indexの値をmov
             stringify!($index),
             "\n",
-            "jmp inthandler_common"         // inthandler_commonにジャンプ
+            "jmp inthandler_common" // inthandler_commonにジャンプ
         ));
     };
 }
@@ -609,7 +605,7 @@ enum IdtAttr {
 pub struct IdtDescriptor {
     offset_low: u16,
     segment_selector: u16,
-    ist_index: u8,      // ISTのどの要素を参照するか
+    ist_index: u8, // ISTのどの要素を参照するか
     attr: IdtAttr,
     offset_mid: u16,
     offset_high: u32,
@@ -618,7 +614,7 @@ pub struct IdtDescriptor {
 const _: () = assert!(size_of::<IdtDescriptor>() == 16);
 impl IdtDescriptor {
     fn new(
-        segment_selector: u16,  // ハンドラをどのような権限でどのようなルールで実行するか
+        segment_selector: u16, // ハンドラをどのような権限でどのようなルールで実行するか
         ist_index: u8,
         attr: IdtAttr,
         f: unsafe extern "sysv64" fn(), // 割り込みハンドラとして登録した関数のポインタ。x86_64の標準的なCの呼び出し規約に従う
@@ -722,7 +718,7 @@ impl Idt {
 struct TaskStateSegment64Inner {
     _reserved0: u32,
     _rsp: [u64; 3],
-    _ist: [u64; 8],   // ist[1]-ist[7], ist[0]はreserved
+    _ist: [u64; 8], // ist[1]-ist[7], ist[0]はreserved
     _reserved1: [u16; 5],
     _io_map_base_addr: u16,
 }
@@ -771,7 +767,7 @@ impl Drop for TaskStateSegment64 {
 
 // 割り込みの初期化
 pub fn init_exceptions() -> (GdtWrapper, Idt) {
-    // 
+    //
     let gdt = GdtWrapper::default();
     gdt.load();
     unsafe {
@@ -917,12 +913,12 @@ pub fn trigger_debug_interrupt() {
 
 /// # Safety
 #[no_mangle]
-pub unsafe fn write_cr3(table: *const PML4){
+pub unsafe fn write_cr3(table: *const PML4) {
     asm!("mov cr3, rax",
             in("rax") table)
 }
 
-pub fn flush_tlb(){
+pub fn flush_tlb() {
     unsafe {
         write_cr3(read_cr3());
     }

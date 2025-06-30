@@ -28,7 +28,7 @@ const EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID: EfiGuid = EfiGuid {
     data3: [0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a],
 };
 
-const EFI_LOADED_IMAGE_PROTOCOL_GUID: EfiGuid = EfiGuid{
+const EFI_LOADED_IMAGE_PROTOCOL_GUID: EfiGuid = EfiGuid {
     data0: 0x5B1B31A1,
     data1: 0x9562,
     data2: 0x11d2,
@@ -316,17 +316,17 @@ pub struct EfiLoadedImageProtocol {
 pub fn locate_loaded_image_protocol(
     image_handle: EfiHandle,
     efi_system_table: &EfiSystemTable,
-) -> Result<&EfiLoadedImageProtocol>{
+) -> Result<&EfiLoadedImageProtocol> {
     let mut graphic_output_protocol = null_mut::<EfiLoadedImageProtocol>();
     let status = (efi_system_table.boot_services.handle_protocol)(
         image_handle,
         &EFI_LOADED_IMAGE_PROTOCOL_GUID,
         &mut graphic_output_protocol as *mut *mut EfiLoadedImageProtocol as *mut *mut EfiVoid,
     );
-    if status != EfiStatus::Success{
-        return  Err("Failed to locate graphics output protocol");
+    if status != EfiStatus::Success {
+        return Err("Failed to locate graphics output protocol");
     }
-    Ok(unsafe{ &*graphic_output_protocol})
+    Ok(unsafe { &*graphic_output_protocol })
 }
 
 pub fn exit_from_boot_services(
