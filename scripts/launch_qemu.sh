@@ -2,6 +2,8 @@
 PROJ_ROOT="$(dirname $(dirname ${BASH_SOURCE:-$0}))"
 cd "${PROJ_ROOT}"
 
+cargo fmt
+
 PATH_TO_EFI="$1"
 rm -rf mnt
 mkdir -p mnt/EFI/BOOT/
