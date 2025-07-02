@@ -6,6 +6,8 @@ use core::fmt::Write;
 use core::panic::PanicInfo;
 
 use core::writeln;
+use wasabi::executor::Executor;
+use wasabi::executor::Task;
 use wasabi::graphics::draw_test_pattern;
 use wasabi::graphics::fill_rect;
 use wasabi::graphics::Bitmap;
@@ -23,7 +25,6 @@ use wasabi::uefi::EfiSystemTable;
 use wasabi::uefi::VramTextWriter;
 
 use wasabi::warn;
-use wasabi::x86::hlt;
 
 use wasabi::error;
 use wasabi::init::init_basic_runtime;
@@ -35,6 +36,8 @@ use wasabi::x86::init_exceptions;
 use wasabi::x86::read_cr3;
 use wasabi::x86::trigger_debug_interrupt;
 use wasabi::x86::PageAttr;
+
+use wasabi::executor::yield_execution;
 
 pub type Result<T> = core::result::Result<T, &'static str>;
 
@@ -109,10 +112,26 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     }
     flush_tlb();
 
-    // println!("Hello, world!");
-    loop {
-        hlt()
-    }
+    let task1 = Task::new(async {
+        for i in 100..=103 {
+            info!("{i}");
+            yield_execution().await
+        }
+        Ok(())
+    });
+
+    let task2 = Task::new(async {
+        for i in 200..=203 {
+            info!("{i}");
+            yield_execution().await
+        }
+        Ok(())
+    });
+
+    let mut executor = Executor::new();
+    executor.enqueue(task1);
+    executor.enqueue(task2);
+    Executor::run(executor)
 }
 
 #[panic_handler]
