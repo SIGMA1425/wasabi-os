@@ -55,6 +55,9 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     error!("error");
     hexdump(efi_system_table);
     let mut vram = init_vram(efi_system_table).expect("init_vram failed");
+    let acpi = efi_system_table.acpi_table().expect("ACPI table not found");
+    info!("{acpi:#p}");
+    hexdump(acpi);
 
     let vw = vram.width();
     let vh = vram.height();
@@ -112,7 +115,13 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     }
     flush_tlb();
 
-    let task1 = Task::new(async {
+    let hpet = acpi.hpet().expect("Failed to get HPET from ACPI");
+    let hpet = hpet
+        .base_address()
+        .expect("Failed to get HPET base address");
+    info!("HPET is at {hpet:#018X}");
+
+    let task1 = Task::new(async move {
         for i in 100..=103 {
             info!("{i}");
             yield_execution().await
