@@ -10,6 +10,7 @@ use core::writeln;
 use wasabi::executor::Executor;
 use wasabi::executor::Task;
 use wasabi::executor::TimeoutFuture;
+use wasabi::graphics::BitmapTextWriter;
 
 use wasabi::info;
 use wasabi::init::init_allocator;
@@ -23,7 +24,6 @@ use wasabi::uefi::init_vram;
 use wasabi::uefi::locate_loaded_image_protocol;
 use wasabi::uefi::EfiHandle;
 use wasabi::uefi::EfiSystemTable;
-use wasabi::uefi::VramTextWriter;
 
 use wasabi::warn;
 
@@ -56,10 +56,10 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
 
     init_display(&mut vram);
 
-    let mut w = VramTextWriter::new(&mut vram);
+    let mut w = BitmapTextWriter::new(&mut vram);
     let memory_map = init_basic_runtime(image_handle, efi_system_table);
     init_allocator(&memory_map);
-    writeln!(w, "Hello, Non-UEFI world!").unwrap();
+    writeln!(w, "Hello, Non-UEFI world!\nThis is test").unwrap();
 
     // 例外の初期化
     let (_gdt, _idt) = init_exceptions();
