@@ -15,6 +15,7 @@ use wasabi::graphics::fill_rect;
 use wasabi::graphics::Bitmap;
 
 use wasabi::info;
+use wasabi::init::init_hpet;
 use wasabi::init::init_paging;
 use wasabi::qemu::exit_qemu;
 use wasabi::qemu::QemuExitCode;
@@ -39,10 +40,7 @@ use wasabi::x86::read_cr3;
 use wasabi::x86::trigger_debug_interrupt;
 use wasabi::x86::PageAttr;
 
-use wasabi::hpet::Hpet;
-
 use wasabi::hpet::global_timestamp;
-use wasabi::hpet::set_global_hpet;
 
 #[no_mangle]
 fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
@@ -118,14 +116,7 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     }
     flush_tlb();
 
-    let hpet = acpi.hpet().expect("Failed to get HPET from ACPI");
-    let hpet = hpet
-        .base_address()
-        .expect("Failed to get HPET base address");
-    info!("HPET is at {hpet:#p}");
-    let hpet = Hpet::new(hpet);
-
-    set_global_hpet(hpet);
+    init_hpet(acpi);
     let t0 = global_timestamp();
 
     let task1 = Task::new(async move {
