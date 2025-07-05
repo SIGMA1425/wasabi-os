@@ -9,10 +9,14 @@ use crate::uefi::exit_from_boot_services;
 use crate::uefi::EfiHandle;
 use crate::uefi::EfiSystemTable;
 use crate::uefi::MemoryMapHolder;
+use crate::uefi::VramBufferInfo;
 
 use crate::uefi::EfiMemoryType;
 use crate::uefi::EfiMemoryType::*;
 
+use crate::graphics::draw_test_pattern;
+use crate::graphics::fill_rect;
+use crate::graphics::Bitmap;
 use crate::x86::write_cr3;
 use crate::x86::PageAttr;
 use crate::x86::PAGE_SIZE;
@@ -74,4 +78,11 @@ pub fn init_allocator(memory_map: &MemoryMapHolder) {
     }
     let total_memory_size_mib = total_memory_pages * 4096 / 1024 / 1024;
     info!("Total: {total_memory_pages} pages = {total_memory_size_mib} MiB");
+}
+
+pub fn init_display(vram: &mut VramBufferInfo) {
+    let vw = vram.width();
+    let vh = vram.height();
+    fill_rect(vram, 0x000000, 0, 0, vw, vh).expect("fill_rect failed");
+    draw_test_pattern(vram);
 }
