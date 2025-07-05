@@ -17,6 +17,7 @@ use wasabi::init::init_paging;
 use wasabi::qemu::exit_qemu;
 use wasabi::qemu::QemuExitCode;
 
+use wasabi::serial::SerialPort;
 use wasabi::uefi::init_vram;
 use wasabi::uefi::locate_loaded_image_protocol;
 use wasabi::uefi::EfiHandle;
@@ -82,10 +83,26 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
         }
         Ok(())
     });
+    let serial_task = Task::new(async {
+        let sp = SerialPort::default();
+        if let Err(e) = sp.loopback_test() {
+            error!("{e:?}");
+            return Err("serial: loopback test failed");
+        }
+        info!("Started to monitor serial port");
+        loop {
+            if let Some(v) = sp.try_read() {
+                let c = char::from_u32(v as u32);
+                info!("serial input: {v:#04X} = {c:?}");
+            }
+            TimeoutFuture::new(Duration::from_millis(20)).await;
+        }
+    });
 
     let mut executor = Executor::new();
     executor.enqueue(task1);
     executor.enqueue(task2);
+    executor.enqueue(serial_task);
     Executor::run(executor)
 }
 
