@@ -2,15 +2,12 @@
 #![feature(offset_of)]
 #![no_main]
 
-use core::fmt::Write;
 use core::panic::PanicInfo;
 use core::time::Duration;
 
-use core::writeln;
 use wasabi::executor::Executor;
 use wasabi::executor::Task;
 use wasabi::executor::TimeoutFuture;
-use wasabi::graphics::BitmapTextWriter;
 
 use wasabi::info;
 use wasabi::init::init_allocator;
@@ -30,6 +27,7 @@ use wasabi::warn;
 use wasabi::error;
 use wasabi::init::init_basic_runtime;
 use wasabi::print::hexdump;
+use wasabi::print::set_global_vram;
 use wasabi::println;
 
 use wasabi::x86::init_exceptions;
@@ -56,10 +54,10 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
 
     init_display(&mut vram);
 
-    let mut w = BitmapTextWriter::new(&mut vram);
+    set_global_vram(vram);
     let memory_map = init_basic_runtime(image_handle, efi_system_table);
     init_allocator(&memory_map);
-    writeln!(w, "Hello, Non-UEFI world!\nThis is test").unwrap();
+    info!("Hello, Non-UEFI world!\nThis is test");
 
     // 例外の初期化
     let (_gdt, _idt) = init_exceptions();
