@@ -40,7 +40,8 @@ use wasabi::x86::PageAttr;
 use wasabi::executor::yield_execution;
 use wasabi::hpet::Hpet;
 
-static mut GLOBAL_HPET: Option<Hpet> = None;
+use wasabi::hpet::global_timestamp;
+use wasabi::hpet::set_global_hpet;
 
 #[no_mangle]
 fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
@@ -122,19 +123,21 @@ fn efi_main(image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
         .expect("Failed to get HPET base address");
     info!("HPET is at {hpet:#p}");
     let hpet = Hpet::new(hpet);
-    let hpet = unsafe { GLOBAL_HPET.insert(hpet) };
 
-    let task1 = Task::new(async {
+    set_global_hpet(hpet);
+    let t0 = global_timestamp();
+
+    let task1 = Task::new(async move {
         for i in 100..=103 {
-            info!("{i} hpet.main_counter = {}", hpet.main_counter());
+            info!("{i} hpet.main_counter = {:?}", global_timestamp() - t0);
             yield_execution().await
         }
         Ok(())
     });
 
-    let task2 = Task::new(async {
+    let task2 = Task::new(async move {
         for i in 200..=203 {
-            info!("{i} hpet.main_counter = {}", hpet.main_counter());
+            info!("{i} hpet.main_counter = {:?}", global_timestamp() - t0);
             yield_execution().await
         }
         Ok(())
