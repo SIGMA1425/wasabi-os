@@ -13,6 +13,7 @@ use core::marker::PhantomData;
 use core::mem::offset_of;
 use core::mem::size_of;
 use core::mem::size_of_val;
+use core::mem::ManuallyDrop;
 use core::mem::MaybeUninit;
 use core::pin::Pin;
 
@@ -936,4 +937,24 @@ pub fn flush_tlb() {
     unsafe {
         write_cr3(read_cr3());
     }
+}
+
+/// # Safety
+pub unsafe fn take_current_page_table() -> ManuallyDrop<Box<PML4>> {
+    ManuallyDrop::new(Box::from_raw(read_cr3()))
+}
+
+/// # Safety
+pub unsafe fn put_current_page_table(mut table: ManuallyDrop<Box<PML4>>) {
+    write_cr3(Box::into_raw(ManuallyDrop::take(&mut table)))
+}
+
+/// # Safety
+pub unsafe fn with_current_page_table<F>(callback: F)
+where
+    F: FnOnce(&mut PML4),
+{
+    let mut table = take_current_page_table();
+    callback(&mut table);
+    put_current_page_table(table)
 }
